@@ -5,12 +5,20 @@ import random
 
 class EntregadorAgent(State):
 
-    def __init__(self, op, mundo):
+    def __init__(self, op, mundo, pos=None):
         super().__init__(op)
         self.pacote = False # comeca sem estar com o pacote
         self.destino = False # comeca sem estar no destino
         self.mundo = mundo # o mundo como o inicializado
-        self.pos = [0,0] # posicao inicial
+        
+        n = len(mundo)
+        if pos is None:
+            for i in range(n):
+                for j in range(n):
+                    if mundo[i][j] == 6:
+                        pos = [i, j]
+        
+        self.pos = pos
     
     def successors(self):
         if self.destino:
@@ -86,24 +94,28 @@ class EntregadorAgent(State):
 
     def h(self):
         n = len(self.mundo)
-        destino_x = n - 1
-        destino_y = n - 1
         x, y = self.pos
-
-        if self.destino:
-            return 1
-
-        if self.pacote:
-            return abs(x - destino_x) + abs(y - destino_y) + 1
 
         for i in range(n):
             for j in range(n):
                 if self.mundo[i][j] == 4:
-                    distancia_pacote = abs(x - i) + abs(y - j)
-                    distancia_destino = abs(i - destino_x) + abs(j - destino_y)
-                    return distancia_pacote + distancia_destino + 2
+                    pacote_x = i
+                    pacote_y = j
 
-        return 0
+                if self.mundo[i][j] == 5:
+                    destino_x = i
+                    destino_y = j
+
+        if self.destino:
+            return 0
+
+        if self.pacote:
+            return abs(x - destino_x) + abs(y - destino_y) + 1
+
+        distancia_pacote = abs(x - pacote_x) + abs(y - pacote_y)
+        distancia_destino = abs(pacote_x - destino_x) + abs(pacote_y - destino_y)
+
+        return distancia_pacote + distancia_destino + 2
 
 def cria_mapa(n):
 
@@ -114,9 +126,6 @@ def cria_mapa(n):
         for j in range(n):
             temp.append(1)
         matriz.append(temp)    
-
-
-
     for i in range(n):
         for j in range(n):
             k = random.randint(0, 1000) / 1000.0 # para o pedagio 
@@ -125,16 +134,73 @@ def cria_mapa(n):
                 matriz[i][j] = 2
             elif p <= 0.11:
                 matriz[i][j] = 3
+
+    inicial_x = random.randint(0, n - 1)
+    inicial_y = random.randint(0, n - 1)
+
     while True:
         pacote_x = random.randint(0, n-1)
         pacote_y = random.randint(0, n-1)
-        if (pacote_x, pacote_y) != (0, 0) and (pacote_x, pacote_y) != (n-1, n-1):
+        if (pacote_x, pacote_y) != (inicial_x, inicial_y):
             break
 
-    matriz[0][0] = 1 # garante que nao tem nada no inicio
+    while True:
+        destino_x = random.randint(0, n - 1)
+        destino_y = random.randint(0, n - 1)
+        if(destino_x, destino_y) != (pacote_x, pacote_y) and (destino_x, destino_y) != (inicial_x, inicial_y):
+            break
+
+    matriz[inicial_x][inicial_y] = 6 # define a posicao inicial
     matriz[pacote_x][pacote_y] = 4 # garante que nao tem nada no destino
-    matriz[n-1][n-1] = 5 # coloca na posicao final o destino
+    matriz[destino_x][destino_y] = 5 # coloca na posicao final o destino
     return matriz
+
+# verifica se exise uma solucao
+def caminho_existe(mundo, inicio, fim):
+    n = len(mundo)
+
+    fila = [inicio]
+    visitados = {inicio}
+
+    while fila:
+        x, y = fila.pop(0)
+        if (x, y) == fim:
+            return True
+        movimentos = [(x - 1, y), (x + 1, y), (x, y - 1),  (x, y + 1)]
+        for nx, ny in movimentos:
+            if 0 <= nx < n and 0 <= ny < n:
+                if mundo[nx][ny] != 3:
+                    if (nx, ny) not in visitados:
+                        visitados.add((nx, ny))
+                        fila.append((nx, ny))
+
+    return False
+def tem_solucao(mundo):
+    inicio = None
+    pacote = None
+    destino = None
+
+    n = len(mundo)
+
+    for i in range(n):
+        for j in range(n):
+            if mundo[i][j] == 6:
+                inicio = (i, j)
+            elif mundo[i][j] == 4:
+                pacote = (i, j)
+            elif mundo[i][j] == 5:
+                destino = (i, j)
+
+    if inicio is None or pacote is None or destino is None:
+        return False
+
+    if not caminho_existe(mundo, inicio, pacote):
+        return False
+
+    if not caminho_existe(mundo, pacote, destino):
+        return False
+
+    return True
 
 
 def main():
@@ -146,14 +212,17 @@ def main():
     for linha in mundo:
         print(linha)
 
-    state = EntregadorAgent('', mundo)
-    algorithm = AEstrela()
-    result = algorithm.search(state, pruning='general')
-    if result != None:
-        print('Achou!')
-        print(result.show_path())
+    if not tem_solucao(mundo):
+        print("Não tem solução para esse problema, tente outra vez")
     else:
-        print('Nao achou solucao')
+        state = EntregadorAgent('', mundo)
+        algorithm = AEstrela()
+        result = algorithm.search(state, pruning='general')
+        if result != None:
+            print('Achou!')
+            print(result.show_path())
+        else:
+            print('Nao achou solucao')
 
 if __name__ == '__main__':
     main()
