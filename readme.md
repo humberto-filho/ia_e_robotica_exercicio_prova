@@ -17,13 +17,13 @@ e cria um mapa semelhante ao da imagem supracitada. Nele, aproximadamente 8% das
 são obstáculos (pode variar conforme a função de geração de mapa), com um pacote num local aleatório, entregador inicia num local aleatório e o destino está num local aleatório também.
 
 Ele usa o algoritmo A Estrela com uma heurística baseada na distância de manhattan definida por:
-$$
+```math
     \begin{cases}
     h(n) = d(atual, pacote) + d(pacote, destino) + 2 \\ 
     h(n) = d(atual, destino) + 1 \\ 
     h(n) = 0 \\ 
     \end{cases}
-$$
+```
 
 Com $d(x,y) = |x_a - x_b| + |y_a - y_b|$
 
